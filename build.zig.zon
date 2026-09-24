@@ -1,0 +1,7 @@
+.{
+    .name = .tape_utils_zig,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.16.0",
+    .paths = .{""},
+    .fingerprint = 0x5c6eb39666dbc2c5,
+}
