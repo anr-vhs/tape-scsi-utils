@@ -22,7 +22,7 @@ n_drives: u32,
 n_slots: u32,
 
 /// Create a changer object
-/// @arg path : The path to the changer device file
+/// @arg device_fd : The file descriptor to the openned device file, this file has to stay open as long as we use the changer
 pub fn create(device_fd: c_int) !Self {
     var changer_infos: chio.struct_changer_params = undefined;
     const r = ioctl(device_fd, chio.CHIOGPARAMS, &changer_infos);

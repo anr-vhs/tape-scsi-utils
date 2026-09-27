@@ -11,23 +11,22 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
-    const load = b.addExecutable(.{ .name = "load", .root_module = b.createModule(.{
+    const drive = b.addModule("drive", .{
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("src/apps/load.zig"),
-        .imports = &.{
-            .{ .name = "changer", .module = changer },
-        },
-    }) });
-    const store = b.addExecutable(.{ .name = "store", .root_module = b.createModule(.{
+        .root_source_file = b.path("src/drive.zig"),
+        .link_libc = true,
+    });
+
+    const tape = b.addExecutable(.{ .name = "tape", .root_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
-        .root_source_file = b.path("src/apps/store.zig"),
+        .root_source_file = b.path("src/app/main.zig"),
         .imports = &.{
             .{ .name = "changer", .module = changer },
+            .{ .name = "drive", .module = drive },
         },
     }) });
 
-    b.installArtifact(load);
-    b.installArtifact(store);
+    b.installArtifact(tape);
 }
