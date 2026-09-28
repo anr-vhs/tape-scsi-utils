@@ -14,26 +14,33 @@ const ChangerError = error{
     InvalidSlot,
 };
 
-/// File descriptor of the device file
-fd: c_int,
+/// File handle of the device file
+file: std.Io.File,
+io: std.Io,
 /// Number of drives
 n_drives: u32,
 /// Number of slots
 n_slots: u32,
 
 /// Create a changer object
-/// @arg device_fd : The file descriptor to the openned device file, this file has to stay open as long as we use the changer
-pub fn create(device_fd: c_int) !Self {
+/// @arg device_path : The absolute path to the device file
+pub fn init(device_path: []const u8, io: std.Io) !Self {
+    const device_file = try std.Io.Dir.openFileAbsolute(io, device_path, .{ .mode = .read_write });
     var changer_infos: chio.struct_changer_params = undefined;
-    const r = ioctl(device_fd, chio.CHIOGPARAMS, &changer_infos);
+    const r = ioctl(device_file.handle, chio.CHIOGPARAMS, &changer_infos);
     if (r != 0) {
         return ChangerError.IoctlError;
     }
     return .{
-        .fd = device_fd,
+        .file = device_file,
+        .io = io,
         .n_drives = @intCast(changer_infos.cp_ndrives),
         .n_slots = @intCast(changer_infos.cp_nslots),
     };
+}
+
+pub fn deinit(self: *Self) void {
+    self.file.close(self.io);
 }
 
 /// Load a tape in a drive
@@ -58,7 +65,7 @@ pub fn load(self: *const Self, slot: u32, drive: u32) !void {
     move.cm_tounit = @intCast(drive);
     move.cm_flags = 0;
 
-    const r = ioctl(self.fd, chio.CHIOMOVE, &move);
+    const r = ioctl(self.file.handle, chio.CHIOMOVE, &move);
     if (r != 0) {
         return ChangerError.IoctlError;
     }
@@ -86,7 +93,7 @@ pub fn store(self: *const Self, drive: u32, slot: u32) !void {
     move.cm_tounit = @intCast(slot);
     move.cm_flags = 0;
 
-    const r = ioctl(self.fd, chio.CHIOMOVE, &move);
+    const r = ioctl(self.file.handle, chio.CHIOMOVE, &move);
     if (r != 0) {
         return ChangerError.IoctlError;
     }

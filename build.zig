@@ -28,5 +28,16 @@ pub fn build(b: *std.Build) void {
         },
     }) });
 
+    const bench = b.addExecutable(.{ .name = "bench", .root_module = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("src/bench/main.zig"),
+        .imports = &.{
+            .{ .name = "changer", .module = changer },
+            .{ .name = "drive", .module = drive },
+        },
+    }) });
+
     b.installArtifact(tape);
+    b.installArtifact(bench);
 }

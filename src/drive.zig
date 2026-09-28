@@ -14,14 +14,21 @@ const DriveError = error{
 };
 
 /// File descriptor of the device file
-fd: c_int,
+file: std.Io.File,
+io: std.Io,
 
 /// Create a drive object
-/// @arg device_fd : The file descriptor to the openned device file, this file has to stay open as long as we use the drive
-pub fn create(device_fd: c_int) !Self {
+/// @arg device_path : The absolute path to the device file
+pub fn init(device_path: []const u8, io: std.Io) !Self {
+    const device_file = try std.Io.Dir.openFileAbsolute(io, device_path, .{ .mode = .read_write });
     return .{
-        .fd = device_fd,
+        .file = device_file,
+        .io = io,
     };
+}
+
+pub fn deinit(self: *Self) void {
+    self.file.close(self.io);
 }
 
 /// Seek to a block
@@ -33,7 +40,7 @@ pub fn seek(self: *const Self, block: u128) !void {
         .mt_count = @intCast(block),
     };
 
-    const r = ioctl(self.fd, mtio.MTIOCTOP, &op);
+    const r = ioctl(self.file.handle, mtio.MTIOCTOP, &op);
     if (r != 0) {
         return DriveError.IoctlError;
     }
@@ -44,7 +51,7 @@ pub fn tell(self: *const Self) !u128 {
     std.log.debug("Telling", .{});
     var pos: mtio.mtpos = undefined;
 
-    const r = ioctl(self.fd, mtio.MTIOCPOS, &pos);
+    const r = ioctl(self.file.handle, mtio.MTIOCPOS, &pos);
     if (r != 0) {
         return DriveError.IoctlError;
     }

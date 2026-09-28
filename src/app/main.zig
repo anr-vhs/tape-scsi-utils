@@ -19,23 +19,25 @@ pub fn main(init: std.process.Init) !u8 {
             return e;
         },
     };
-    const device = try std.Io.Dir.openFileAbsolute(init.io, args.device, .{ .mode = .read_write });
-    defer device.close(init.io);
     switch (args.op) {
         .load => {
-            const c = try changer.create(device.handle);
+            var c = try changer.init(args.device, init.io);
+            defer c.deinit();
             try c.load(args.slot, args.drive);
         },
         .store => {
-            const c = try changer.create(device.handle);
+            var c = try changer.init(args.device, init.io);
+            defer c.deinit();
             try c.store(args.drive, args.slot);
         },
         .seek => {
-            const d = try drive.create(device.handle);
+            var d = try drive.init(args.device, init.io);
+            defer d.deinit();
             try d.seek(args.block);
         },
         .tell => {
-            const d = try drive.create(device.handle);
+            var d = try drive.init(args.device, init.io);
+            defer d.deinit();
             try stdout.print("{}", .{try d.tell()});
         },
     }
