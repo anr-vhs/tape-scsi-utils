@@ -42,14 +42,11 @@ pub fn seek(self: *const Self, block: u128) !void {
 /// Tell which block the reader is on
 pub fn tell(self: *const Self) !u128 {
     std.log.debug("Telling", .{});
-    const op: mtop = .{
-        .mt_op = mtio.MTSEEK,
-        .mt_count = 0,
-    };
+    var pos: mtio.mtpos = undefined;
 
-    const r = ioctl(self.fd, mtio.MTIOCTOP, &op);
+    const r = ioctl(self.fd, mtio.MTIOCPOS, &pos);
     if (r != 0) {
         return DriveError.IoctlError;
     }
-    return @intCast(op.mt_count);
+    return @intCast(pos.mt_blkno);
 }
