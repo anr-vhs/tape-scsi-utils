@@ -3,6 +3,7 @@ const std = @import("std");
 pub const op = enum {
     load,
     store,
+    contents,
     seek,
     tell,
 };
@@ -56,6 +57,12 @@ pub fn argparse(init: std.process.Init) !op_args {
             .device = if (args.len == 4) "/dev/sch0" else args[5],
         };
     }
+    if (std.mem.eql(u8, op_arg, "contents")) {
+        return .{
+            .op = .contents,
+            .device = if (args.len == 2) "/dev/sch0" else args[2],
+        };
+    }
     if (std.mem.eql(u8, op_arg, "seek")) {
         if (args.len < 4) {
             return err.ParseError;
@@ -88,6 +95,7 @@ pub fn help(cmd: []const u8) void {
         "  Changer operations\n" ++
         "    load <slot> <drive> [device] : Load a tape from a slot to a drive\n" ++
         "    store <drive> <slot> [device] : Store a tape from a drive to a slot\n" ++
+        "    contents [device] : Get the contents of each drive and slot\n" ++
         "  Tape drive operations\n" ++
         "    tell <device> : Tell at which block the reader is in the tape\n" ++
         "    seek <device> <block> : Seek to the block\n", .{cmd});

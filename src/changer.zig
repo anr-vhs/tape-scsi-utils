@@ -27,8 +27,7 @@ n_slots: u32,
 pub fn init(device_path: []const u8, io: std.Io) !Self {
     const device_file = try std.Io.Dir.openFileAbsolute(io, device_path, .{ .mode = .read_write });
     var changer_infos: chio.struct_changer_params = undefined;
-    const r = ioctl(device_file.handle, chio.CHIOGPARAMS, &changer_infos);
-    if (r != 0) {
+    if (ioctl(device_file.handle, chio.CHIOGPARAMS, &changer_infos) != 0) {
         return ChangerError.IoctlError;
     }
     return .{
@@ -58,15 +57,15 @@ pub fn load(self: *const Self, slot: u32, drive: u32) !void {
         .{ slot, drive },
     );
 
-    var move = std.mem.zeroes(chio.struct_changer_move);
-    move.cm_fromtype = chio.CHET_ST;
-    move.cm_fromunit = @intCast(slot);
-    move.cm_totype = chio.CHET_DT;
-    move.cm_tounit = @intCast(drive);
-    move.cm_flags = 0;
+    var move: chio.struct_changer_move = .{
+        .cm_fromtype = chio.CHET_ST,
+        .cm_fromunit = @intCast(slot),
+        .cm_totype = chio.CHET_DT,
+        .cm_tounit = @intCast(drive),
+        .cm_flags = 0,
+    };
 
-    const r = ioctl(self.file.handle, chio.CHIOMOVE, &move);
-    if (r != 0) {
+    if (ioctl(self.file.handle, chio.CHIOMOVE, &move) != 0) {
         return ChangerError.IoctlError;
     }
 }
@@ -86,15 +85,79 @@ pub fn store(self: *const Self, drive: u32, slot: u32) !void {
         .{ drive, slot },
     );
 
-    var move = std.mem.zeroes(chio.struct_changer_move);
-    move.cm_fromtype = chio.CHET_DT;
-    move.cm_fromunit = @intCast(drive);
-    move.cm_totype = chio.CHET_ST;
-    move.cm_tounit = @intCast(slot);
-    move.cm_flags = 0;
+    var move: chio.struct_changer_move = .{
+        .cm_fromtype = chio.CHET_DT,
+        .cm_fromunit = @intCast(drive),
+        .cm_totype = chio.CHET_ST,
+        .cm_tounit = @intCast(slot),
+        .cm_flags = 0,
+    };
 
-    const r = ioctl(self.file.handle, chio.CHIOMOVE, &move);
-    if (r != 0) {
+    if (ioctl(self.file.handle, chio.CHIOMOVE, &move) != 0) {
         return ChangerError.IoctlError;
     }
+}
+
+pub fn get_drives_contents(self: *const Self, allocator: std.mem.Allocator) !std.ArrayList(?[36]u8) {
+    var res = try std.ArrayList(?[36]u8).initCapacity(allocator, self.n_drives);
+
+    var data = try std.ArrayList(u8).initCapacity(allocator, self.n_drives);
+    defer data.deinit(allocator);
+    try data.appendNTimes(allocator, 0, self.n_drives);
+    var status: chio.changer_element_status = .{
+        .ces_type = chio.CHET_DT,
+        .ces_data = data.items.ptr,
+    };
+    if (ioctl(self.file.handle, chio.CHIOGSTATUS, &status) != 0) {
+        return ChangerError.IoctlError;
+    }
+
+    for (data.items, 0..) |element_status, i| {
+        if (element_status & chio.CESTATUS_FULL != 0) {
+            var element: chio.changer_get_element = .{
+                .cge_type = chio.CHET_DT,
+                .cge_unit = @intCast(i),
+            };
+            if (ioctl(self.file.handle, chio.CHIOGELEM, &element) != 0) {
+                return ChangerError.IoctlError;
+            }
+            try res.append(allocator, element.cge_pvoltag);
+        } else {
+            try res.append(allocator, null);
+        }
+    }
+
+    return res;
+}
+
+pub fn get_slots_contents(self: *const Self, allocator: std.mem.Allocator) !std.ArrayList(?[36]u8) {
+    var res = try std.ArrayList(?[36]u8).initCapacity(allocator, self.n_slots);
+
+    var data = try std.ArrayList(u8).initCapacity(allocator, self.n_slots);
+    defer data.deinit(allocator);
+    try data.appendNTimes(allocator, 0, self.n_slots);
+    var status: chio.changer_element_status = .{
+        .ces_type = chio.CHET_ST,
+        .ces_data = data.items.ptr,
+    };
+    if (ioctl(self.file.handle, chio.CHIOGSTATUS, &status) != 0) {
+        return ChangerError.IoctlError;
+    }
+
+    for (data.items, 0..) |element_status, i| {
+        if (element_status & chio.CESTATUS_FULL != 0) {
+            var element: chio.changer_get_element = .{
+                .cge_type = chio.CHET_ST,
+                .cge_unit = @intCast(i),
+            };
+            if (ioctl(self.file.handle, chio.CHIOGELEM, &element) != 0) {
+                return ChangerError.IoctlError;
+            }
+            try res.append(allocator, element.cge_pvoltag);
+        } else {
+            try res.append(allocator, null);
+        }
+    }
+
+    return res;
 }

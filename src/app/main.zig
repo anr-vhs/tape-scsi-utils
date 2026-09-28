@@ -1,6 +1,6 @@
 const std = @import("std");
-const changer = @import("changer");
-const drive = @import("drive");
+const Changer = @import("changer");
+const Drive = @import("drive");
 
 const argparse = @import("argparse.zig");
 
@@ -21,24 +21,48 @@ pub fn main(init: std.process.Init) !u8 {
     };
     switch (args.op) {
         .load => {
-            var c = try changer.init(args.device, init.io);
-            defer c.deinit();
-            try c.load(args.slot, args.drive);
+            var changer = try Changer.init(args.device, init.io);
+            defer changer.deinit();
+            try changer.load(args.slot, args.drive);
         },
         .store => {
-            var c = try changer.init(args.device, init.io);
-            defer c.deinit();
-            try c.store(args.drive, args.slot);
+            var changer = try Changer.init(args.device, init.io);
+            defer changer.deinit();
+            try changer.store(args.drive, args.slot);
+        },
+        .contents => {
+            var changer = try Changer.init(args.device, init.io);
+            defer changer.deinit();
+            var drive_contents = try changer.get_drives_contents(init.gpa);
+            defer drive_contents.deinit(init.gpa);
+            for (drive_contents.items, 0..) |drive, i| {
+                try stdout.print("Drive {}: ", .{i});
+                if (drive) |tag| {
+                    try stdout.print("{s}\n", .{tag});
+                } else {
+                    try stdout.print("Empty\n", .{});
+                }
+            }
+            var slots_contents = try changer.get_slots_contents(init.gpa);
+            defer slots_contents.deinit(init.gpa);
+            for (slots_contents.items, 0..) |slot, i| {
+                try stdout.print("Slot {}: ", .{i});
+                if (slot) |tag| {
+                    try stdout.print("{s}\n", .{tag});
+                } else {
+                    try stdout.print("Empty\n", .{});
+                }
+            }
         },
         .seek => {
-            var d = try drive.init(args.device, init.io);
-            defer d.deinit();
-            try d.seek(args.block);
+            var drive = try Drive.init(args.device, init.io);
+            defer drive.deinit();
+            try drive.seek(args.block);
         },
         .tell => {
-            var d = try drive.init(args.device, init.io);
-            defer d.deinit();
-            try stdout.print("{}", .{try d.tell()});
+            var drive = try Drive.init(args.device, init.io);
+            defer drive.deinit();
+            try stdout.print("{}", .{try drive.tell()});
         },
     }
     return 0;
