@@ -1,6 +1,7 @@
 const std = @import("std");
-const Changer = @import("changer");
-const Drive = @import("drive");
+const Library = @import("library");
+const Changer = Library.Changer;
+const Drive = Library.Drive;
 
 const argparse = @import("argparse.zig");
 
@@ -8,7 +9,7 @@ pub fn main(init: std.process.Init) !u8 {
     var stdout_file_writer = std.Io.File.stdout().writer(init.io, &.{});
     const stdout = &stdout_file_writer.interface;
     const args = argparse.argparse(init) catch |e| switch (e) {
-        argparse.err.ParseError => {
+        argparse.Error.ParseError => {
             std.log.err("Invalid usage", .{});
             const argv = try init.minimal.args.toSlice(init.gpa);
             defer init.gpa.free(argv);

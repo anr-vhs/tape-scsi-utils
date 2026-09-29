@@ -1,6 +1,6 @@
 const std = @import("std");
-const Changer = @import("changer");
-const Drive = @import("drive");
+pub const Changer = @import("changer.zig");
+pub const Drive = @import("drive.zig");
 
 const Tape = struct {
     volume_tag: [36]u8,
