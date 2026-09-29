@@ -14,13 +14,13 @@ pub const op_args = struct {
     drive: u32 = 0,
     block: u128 = 0,
 };
-pub const err = error{ParseError};
+pub const Error = error{ParseError};
 
 pub fn argparse(init: std.process.Init) !op_args {
     const args = try init.minimal.args.toSlice(init.gpa);
     defer init.gpa.free(args);
     if (args.len == 1) {
-        return err.ParseError;
+        return Error.ParseError;
     }
     const op_arg = args[1];
     if (std.mem.eql(u8, op_arg, "help")) {
@@ -29,30 +29,30 @@ pub fn argparse(init: std.process.Init) !op_args {
     }
     if (std.mem.eql(u8, op_arg, "load")) {
         if (args.len < 4) {
-            return err.ParseError;
+            return Error.ParseError;
         }
         return .{
             .op = .load,
             .slot = std.fmt.parseInt(u32, args[2], 10) catch {
-                return err.ParseError;
+                return Error.ParseError;
             },
             .drive = std.fmt.parseInt(u32, args[3], 10) catch {
-                return err.ParseError;
+                return Error.ParseError;
             },
             .device = if (args.len == 4) "/dev/sch0" else args[5],
         };
     }
     if (std.mem.eql(u8, op_arg, "store")) {
         if (args.len < 4) {
-            return err.ParseError;
+            return Error.ParseError;
         }
         return .{
             .op = .store,
             .drive = std.fmt.parseInt(u32, args[2], 10) catch {
-                return err.ParseError;
+                return Error.ParseError;
             },
             .slot = std.fmt.parseInt(u32, args[3], 10) catch {
-                return err.ParseError;
+                return Error.ParseError;
             },
             .device = if (args.len == 4) "/dev/sch0" else args[5],
         };
@@ -65,26 +65,26 @@ pub fn argparse(init: std.process.Init) !op_args {
     }
     if (std.mem.eql(u8, op_arg, "seek")) {
         if (args.len < 4) {
-            return err.ParseError;
+            return Error.ParseError;
         }
         return .{
             .op = .seek,
             .device = args[2],
             .block = std.fmt.parseInt(u128, args[3], 10) catch {
-                return err.ParseError;
+                return Error.ParseError;
             },
         };
     }
     if (std.mem.eql(u8, op_arg, "tell")) {
         if (args.len < 3) {
-            return err.ParseError;
+            return Error.ParseError;
         }
         return .{
             .op = .tell,
             .device = args[2],
         };
     }
-    return err.ParseError;
+    return Error.ParseError;
 }
 
 pub fn help(cmd: []const u8) void {

@@ -70,7 +70,7 @@ pub fn load(self: *const Self, slot: u32, drive: u32) !void {
     }
 }
 
-/// Load a tape in a slot
+/// Store a tape in a slot
 /// @arg drive : Drive number
 /// @arg slot : Slot number
 pub fn store(self: *const Self, drive: u32, slot: u32) !void {
@@ -98,6 +98,8 @@ pub fn store(self: *const Self, drive: u32, slot: u32) !void {
     }
 }
 
+/// Get the contents of the drives
+/// @returns An array of volume tags or null depending on wether the drive is full or not
 pub fn get_drives_contents(self: *const Self, allocator: std.mem.Allocator) !std.ArrayList(?[36]u8) {
     var res = try std.ArrayList(?[36]u8).initCapacity(allocator, self.n_drives);
 
@@ -130,6 +132,8 @@ pub fn get_drives_contents(self: *const Self, allocator: std.mem.Allocator) !std
     return res;
 }
 
+/// Get the contents of the storage slots
+/// @returns An array of volume tags or null depending on wether the slot is full or not
 pub fn get_slots_contents(self: *const Self, allocator: std.mem.Allocator) !std.ArrayList(?[36]u8) {
     var res = try std.ArrayList(?[36]u8).initCapacity(allocator, self.n_slots);
 

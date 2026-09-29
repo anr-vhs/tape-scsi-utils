@@ -9,7 +9,7 @@ const mtop = mtio.mtop;
 
 const Self = @This();
 
-const DriveError = error{
+const Error = error{
     IoctlError,
 };
 
@@ -42,7 +42,7 @@ pub fn seek(self: *const Self, block: u128) !void {
 
     const r = ioctl(self.file.handle, mtio.MTIOCTOP, &op);
     if (r != 0) {
-        return DriveError.IoctlError;
+        return Error.IoctlError;
     }
 }
 
@@ -53,7 +53,7 @@ pub fn tell(self: *const Self) !u128 {
 
     const r = ioctl(self.file.handle, mtio.MTIOCPOS, &pos);
     if (r != 0) {
-        return DriveError.IoctlError;
+        return Error.IoctlError;
     }
     return @intCast(pos.mt_blkno);
 }

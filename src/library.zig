@@ -30,6 +30,9 @@ slots: std.ArrayList(Slot),
 io: std.Io,
 allocator: std.mem.Allocator,
 
+/// Create a library controller object
+/// @arg changer_path : Path to the changer device file
+/// @arg drive_paths : Array of paths to the drive devices
 pub fn init(changer_path: []const u8, drive_paths: [][]const u8, io: std.Io, allocator: std.mem.Allocator) !Self {
     const changer = try Changer.init(changer_path, io);
     if (changer.n_drives != drive_paths.len) {
@@ -87,6 +90,9 @@ pub fn deinit(self: *Self) void {
     self.slots.deinit(self.allocator);
 }
 
+/// Load a tape in a drive
+/// @arg slot : Slot number
+/// @arg drive : Drive number
 pub fn load(self: *Self, slot: u32, drive: u32) !void {
     if (slot >= self.changer.n_slots) {
         return Changer.Error.InvalidSlot;
@@ -108,6 +114,9 @@ pub fn load(self: *Self, slot: u32, drive: u32) !void {
     self.slots.items[slot].content = null;
 }
 
+/// Store a tape in a slot
+/// @arg drive : Drive number
+/// @arg slot : Slot number
 pub fn store(self: *Self, drive: u32, slot: u32) !void {
     if (drive >= self.changer.n_drives) {
         return Changer.Error.InvalidDrive;
