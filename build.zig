@@ -18,6 +18,16 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
+    const library = b.addModule("library", .{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("src/library.zig"),
+        .imports = &.{
+            .{ .name = "changer", .module = changer },
+            .{ .name = "drive", .module = drive },
+        },
+    });
+
     const tape = b.addExecutable(.{ .name = "tape", .root_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
@@ -35,6 +45,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "changer", .module = changer },
             .{ .name = "drive", .module = drive },
+            .{ .name = "library", .module = library },
         },
     }) });
 

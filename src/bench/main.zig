@@ -1,6 +1,7 @@
 const std = @import("std");
 const Changer = @import("changer");
 const Drive = @import("drive");
+const Library = @import("library");
 
 const rstopwatch = @import("rstopwatch.zig");
 
@@ -11,15 +12,14 @@ pub fn main(init: std.process.Init) !u8 {
     const args = try init.minimal.args.toSlice(init.gpa);
     defer init.gpa.free(args);
 
-    var changer = try Changer.init(args[1], init.io);
-    defer changer.deinit();
-
     var drive_files = try std.ArrayList([]const u8).initCapacity(init.gpa, args.len - 2);
-    var i: u8 = 2;
-    while (i < args.len) : (i += 1) {
+    for (2..args.len) |i| {
         try drive_files.append(init.gpa, args[i]);
     }
     defer drive_files.deinit(init.gpa);
+
+    var library = try Library.init(args[1], drive_files.items, init.io, init.gpa);
+    defer library.deinit();
 
     std.log.debug("Starting benchmarks", .{});
 
@@ -27,9 +27,9 @@ pub fn main(init: std.process.Init) !u8 {
     defer stopwatch.deinit();
 
     try stopwatch.take_snapshot();
-    try changer.load(0, 0);
+    try library.load(0, 0);
     try stopwatch.take_snapshot();
-    try changer.store(0, 0);
+    try library.store(0, 0);
     try stopwatch.take_snapshot();
 
     try stdout.print("Time spent in I/O\n" ++

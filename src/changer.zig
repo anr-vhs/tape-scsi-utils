@@ -8,7 +8,7 @@ const ioctl = chio.ioctl;
 
 const Self = @This();
 
-const ChangerError = error{
+pub const Error = error{
     IoctlError,
     InvalidDrive,
     InvalidSlot,
@@ -28,7 +28,7 @@ pub fn init(device_path: []const u8, io: std.Io) !Self {
     const device_file = try std.Io.Dir.openFileAbsolute(io, device_path, .{ .mode = .read_write });
     var changer_infos: chio.struct_changer_params = undefined;
     if (ioctl(device_file.handle, chio.CHIOGPARAMS, &changer_infos) != 0) {
-        return ChangerError.IoctlError;
+        return Error.IoctlError;
     }
     return .{
         .file = device_file,
@@ -47,10 +47,10 @@ pub fn deinit(self: *Self) void {
 /// @arg drive : Drive number
 pub fn load(self: *const Self, slot: u32, drive: u32) !void {
     if (slot >= self.n_slots) {
-        return ChangerError.InvalidSlot;
+        return Error.InvalidSlot;
     }
     if (drive >= self.n_drives) {
-        return ChangerError.InvalidDrive;
+        return Error.InvalidDrive;
     }
     std.log.debug(
         "Loading from slot {d} to drive {d}",
@@ -66,7 +66,7 @@ pub fn load(self: *const Self, slot: u32, drive: u32) !void {
     };
 
     if (ioctl(self.file.handle, chio.CHIOMOVE, &move) != 0) {
-        return ChangerError.IoctlError;
+        return Error.IoctlError;
     }
 }
 
@@ -75,10 +75,10 @@ pub fn load(self: *const Self, slot: u32, drive: u32) !void {
 /// @arg slot : Slot number
 pub fn store(self: *const Self, drive: u32, slot: u32) !void {
     if (drive >= self.n_drives) {
-        return ChangerError.InvalidDrive;
+        return Error.InvalidDrive;
     }
     if (slot >= self.n_slots) {
-        return ChangerError.InvalidSlot;
+        return Error.InvalidSlot;
     }
     std.log.debug(
         "Storing from drive {d} to slot {d}",
@@ -94,7 +94,7 @@ pub fn store(self: *const Self, drive: u32, slot: u32) !void {
     };
 
     if (ioctl(self.file.handle, chio.CHIOMOVE, &move) != 0) {
-        return ChangerError.IoctlError;
+        return Error.IoctlError;
     }
 }
 
@@ -109,7 +109,7 @@ pub fn get_drives_contents(self: *const Self, allocator: std.mem.Allocator) !std
         .ces_data = data.items.ptr,
     };
     if (ioctl(self.file.handle, chio.CHIOGSTATUS, &status) != 0) {
-        return ChangerError.IoctlError;
+        return Error.IoctlError;
     }
 
     for (data.items, 0..) |element_status, i| {
@@ -119,7 +119,7 @@ pub fn get_drives_contents(self: *const Self, allocator: std.mem.Allocator) !std
                 .cge_unit = @intCast(i),
             };
             if (ioctl(self.file.handle, chio.CHIOGELEM, &element) != 0) {
-                return ChangerError.IoctlError;
+                return Error.IoctlError;
             }
             try res.append(allocator, element.cge_pvoltag);
         } else {
@@ -141,7 +141,7 @@ pub fn get_slots_contents(self: *const Self, allocator: std.mem.Allocator) !std.
         .ces_data = data.items.ptr,
     };
     if (ioctl(self.file.handle, chio.CHIOGSTATUS, &status) != 0) {
-        return ChangerError.IoctlError;
+        return Error.IoctlError;
     }
 
     for (data.items, 0..) |element_status, i| {
@@ -151,7 +151,7 @@ pub fn get_slots_contents(self: *const Self, allocator: std.mem.Allocator) !std.
                 .cge_unit = @intCast(i),
             };
             if (ioctl(self.file.handle, chio.CHIOGELEM, &element) != 0) {
-                return ChangerError.IoctlError;
+                return Error.IoctlError;
             }
             try res.append(allocator, element.cge_pvoltag);
         } else {
