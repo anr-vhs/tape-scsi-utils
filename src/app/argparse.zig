@@ -10,9 +10,9 @@ pub const op = enum {
 pub const op_args = struct {
     op: op,
     device: []const u8,
-    slot: u32 = 0,
-    drive: u32 = 0,
-    block: u128 = 0,
+    slot: usize = 0,
+    drive: usize = 0,
+    block: usize = 0,
 };
 pub const Error = error{ParseError};
 
@@ -33,10 +33,10 @@ pub fn argparse(init: std.process.Init) !op_args {
         }
         return .{
             .op = .load,
-            .slot = std.fmt.parseInt(u32, args[2], 10) catch {
+            .slot = std.fmt.parseInt(usize, args[2], 10) catch {
                 return Error.ParseError;
             },
-            .drive = std.fmt.parseInt(u32, args[3], 10) catch {
+            .drive = std.fmt.parseInt(usize, args[3], 10) catch {
                 return Error.ParseError;
             },
             .device = if (args.len == 4) "/dev/sch0" else args[5],
@@ -48,10 +48,10 @@ pub fn argparse(init: std.process.Init) !op_args {
         }
         return .{
             .op = .store,
-            .drive = std.fmt.parseInt(u32, args[2], 10) catch {
+            .drive = std.fmt.parseInt(usize, args[2], 10) catch {
                 return Error.ParseError;
             },
-            .slot = std.fmt.parseInt(u32, args[3], 10) catch {
+            .slot = std.fmt.parseInt(usize, args[3], 10) catch {
                 return Error.ParseError;
             },
             .device = if (args.len == 4) "/dev/sch0" else args[5],
@@ -70,7 +70,7 @@ pub fn argparse(init: std.process.Init) !op_args {
         return .{
             .op = .seek,
             .device = args[2],
-            .block = std.fmt.parseInt(u128, args[3], 10) catch {
+            .block = std.fmt.parseInt(usize, args[3], 10) catch {
                 return Error.ParseError;
             },
         };

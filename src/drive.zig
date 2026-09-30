@@ -4,8 +4,9 @@ const mtio = @cImport({
     @cInclude("sys/ioctl.h");
     @cInclude("linux/mtio.h");
 });
-const ioctl = mtio.ioctl;
 const mtop = mtio.mtop;
+
+const ioctl = @import("ioctl.zig").ioctl;
 
 const Self = @This();
 
@@ -33,27 +34,22 @@ pub fn deinit(self: *Self) void {
 
 /// Seek to a block
 /// @arg block : Block number
-pub fn seek(self: *const Self, block: u128) !void {
+pub fn seek(self: *const Self, block: usize) !void {
     std.log.debug("Seeking to {}", .{block});
-    const op: mtop = .{
+    var op: mtop = .{
         .mt_op = mtio.MTSEEK,
         .mt_count = @intCast(block),
     };
 
-    const r = ioctl(self.file.handle, mtio.MTIOCTOP, &op);
-    if (r != 0) {
-        return Error.IoctlError;
-    }
+    try ioctl(self.file.handle, mtio.MTIOCTOP, &op);
 }
 
 /// Tell which block the reader is on
-pub fn tell(self: *const Self) !u128 {
+pub fn tell(self: *const Self) !usize {
     std.log.debug("Telling", .{});
     var pos: mtio.mtpos = undefined;
 
-    const r = ioctl(self.file.handle, mtio.MTIOCPOS, &pos);
-    if (r != 0) {
-        return Error.IoctlError;
-    }
+    try ioctl(self.file.handle, mtio.MTIOCPOS, &pos);
+
     return @intCast(pos.mt_blkno);
 }

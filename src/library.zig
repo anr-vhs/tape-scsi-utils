@@ -93,7 +93,7 @@ pub fn deinit(self: *Self) void {
 /// Load a tape in a drive
 /// @arg slot : Slot number
 /// @arg drive : Drive number
-pub fn load(self: *Self, slot: u32, drive: u32) !void {
+pub fn load(self: *Self, slot: usize, drive: usize) !void {
     if (slot >= self.changer.n_slots) {
         return Changer.Error.InvalidSlot;
     }
@@ -117,7 +117,7 @@ pub fn load(self: *Self, slot: u32, drive: u32) !void {
 /// Store a tape in a slot
 /// @arg drive : Drive number
 /// @arg slot : Slot number
-pub fn store(self: *Self, drive: u32, slot: u32) !void {
+pub fn store(self: *Self, drive: usize, slot: usize) !void {
     if (drive >= self.changer.n_drives) {
         return Changer.Error.InvalidDrive;
     }

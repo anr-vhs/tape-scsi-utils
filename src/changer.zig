@@ -4,12 +4,12 @@ const chio = @cImport({
     @cInclude("sys/ioctl.h");
     @cInclude("linux/chio.h");
 });
-const ioctl = chio.ioctl;
+
+const ioctl = @import("ioctl.zig").ioctl;
 
 const Self = @This();
 
 pub const Error = error{
-    IoctlError,
     InvalidDrive,
     InvalidSlot,
 };
@@ -33,9 +33,7 @@ io: std.Io,
 pub fn init(device_path: []const u8, io: std.Io) !Self {
     const device_file = try std.Io.Dir.openFileAbsolute(io, device_path, .{ .mode = .read_write });
     var changer_infos: chio.struct_changer_params = undefined;
-    if (ioctl(device_file.handle, chio.CHIOGPARAMS, &changer_infos) != 0) {
-        return Error.IoctlError;
-    }
+    try ioctl(device_file.handle, chio.CHIOGPARAMS, &changer_infos);
     return .{
         .file = device_file,
         .io = io,
@@ -51,7 +49,7 @@ pub fn deinit(self: *Self) void {
 /// Load a tape in a drive
 /// @arg slot : Slot number
 /// @arg drive : Drive number
-pub fn load(self: *const Self, slot: u32, drive: u32) !void {
+pub fn load(self: *const Self, slot: usize, drive: usize) !void {
     if (slot >= self.n_slots) {
         return Error.InvalidSlot;
     }
@@ -71,15 +69,13 @@ pub fn load(self: *const Self, slot: u32, drive: u32) !void {
         .cm_flags = 0,
     };
 
-    if (ioctl(self.file.handle, chio.CHIOMOVE, &move) != 0) {
-        return Error.IoctlError;
-    }
+    try ioctl(self.file.handle, chio.CHIOMOVE, &move);
 }
 
 /// Store a tape in a slot
 /// @arg drive : Drive number
 /// @arg slot : Slot number
-pub fn store(self: *const Self, drive: u32, slot: u32) !void {
+pub fn store(self: *const Self, drive: usize, slot: usize) !void {
     if (drive >= self.n_drives) {
         return Error.InvalidDrive;
     }
@@ -99,9 +95,7 @@ pub fn store(self: *const Self, drive: u32, slot: u32) !void {
         .cm_flags = 0,
     };
 
-    if (ioctl(self.file.handle, chio.CHIOMOVE, &move) != 0) {
-        return Error.IoctlError;
-    }
+    try ioctl(self.file.handle, chio.CHIOMOVE, &move);
 }
 
 /// Get the contents of the drives
@@ -116,9 +110,7 @@ pub fn get_drives_contents(self: *const Self, allocator: std.mem.Allocator) !std
         .ces_type = @intFromEnum(ElementKind.Drive),
         .ces_data = data.items.ptr,
     };
-    if (ioctl(self.file.handle, chio.CHIOGSTATUS, &status) != 0) {
-        return Error.IoctlError;
-    }
+    try ioctl(self.file.handle, chio.CHIOGSTATUS, &status);
 
     for (data.items, 0..) |element_status, i| {
         if (element_status & chio.CESTATUS_FULL != 0) {
@@ -126,9 +118,7 @@ pub fn get_drives_contents(self: *const Self, allocator: std.mem.Allocator) !std
                 .cge_type = @intFromEnum(ElementKind.Drive),
                 .cge_unit = @intCast(i),
             };
-            if (ioctl(self.file.handle, chio.CHIOGELEM, &element) != 0) {
-                return Error.IoctlError;
-            }
+            try ioctl(self.file.handle, chio.CHIOGELEM, &element);
             try res.append(allocator, element.cge_pvoltag);
         } else {
             try res.append(allocator, null);
@@ -150,9 +140,7 @@ pub fn get_slots_contents(self: *const Self, allocator: std.mem.Allocator) !std.
         .ces_type = @intFromEnum(ElementKind.Slot),
         .ces_data = data.items.ptr,
     };
-    if (ioctl(self.file.handle, chio.CHIOGSTATUS, &status) != 0) {
-        return Error.IoctlError;
-    }
+    try ioctl(self.file.handle, chio.CHIOGSTATUS, &status);
 
     for (data.items, 0..) |element_status, i| {
         if (element_status & chio.CESTATUS_FULL != 0) {
@@ -160,9 +148,7 @@ pub fn get_slots_contents(self: *const Self, allocator: std.mem.Allocator) !std.
                 .cge_type = @intFromEnum(ElementKind.Slot),
                 .cge_unit = @intCast(i),
             };
-            if (ioctl(self.file.handle, chio.CHIOGELEM, &element) != 0) {
-                return Error.IoctlError;
-            }
+            try ioctl(self.file.handle, chio.CHIOGELEM, &element);
             try res.append(allocator, element.cge_pvoltag);
         } else {
             try res.append(allocator, null);
@@ -175,15 +161,15 @@ pub fn get_slots_contents(self: *const Self, allocator: std.mem.Allocator) !std.
 /// Move the robot arm to a position
 /// @arg element_kind : The kind of element the target is (drive or slot)
 /// @arg position : The number of the drive or slot to move to
-pub fn move_arm(self: *const Self, element_kind: ElementKind, position: u32) !void {
+pub fn move_arm(self: *const Self, element_kind: ElementKind, position: usize) !void {
     if (element_kind == ElementKind.Drive and position >= self.n_drives) {
         return Error.InvalidDrive;
     }
-    if (element_kind == ElementKind.slot and position >= self.n_slots) {
+    if (element_kind == ElementKind.Slot and position >= self.n_slots) {
         return Error.InvalidSlot;
     }
 
-    std.log.debug("Moving to {s} {}", .{ switch (element_kind) {
+    std.log.debug("Moving arm to {s} {}", .{ switch (element_kind) {
         .Drive => "Drive",
         .Slot => "Slot",
     }, position });
@@ -194,7 +180,5 @@ pub fn move_arm(self: *const Self, element_kind: ElementKind, position: u32) !vo
         .cp_flags = 0,
     };
 
-    if (ioctl(self.file.handle, chio.CHIOMOVE, &move) != 0) {
-        return Error.IoctlError;
-    }
+    try ioctl(self.file.handle, chio.CHIOPOSITION, &move);
 }

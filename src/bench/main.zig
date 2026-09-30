@@ -39,21 +39,12 @@ pub fn main(init: std.process.Init) !u8 {
 
     std.log.debug("Starting benchmarks", .{});
 
-    var stopwatch = try RStopwatch.init(std.Io.Clock.real, init.io, init.gpa);
-    defer stopwatch.deinit();
+    var stats = try changer_benchmark.benchmark_changer(&library, init.gpa, init.io);
+    defer stats.loads.deinit(init.gpa);
+    defer stats.stores.deinit(init.gpa);
+    defer stats.moves.deinit(init.gpa);
 
-    try stopwatch.take_snapshot();
-    try library.load(0, 0);
-    try stopwatch.take_snapshot();
-    try library.store(0, 0);
-    try stopwatch.take_snapshot();
-
-    try stdout.print("Time spent in I/O\n" ++
-        "    Load  : {}\n" ++
-        "    Store : {}\n", .{
-        (try stopwatch.get_lap(0)).iotime(),
-        (try stopwatch.get_lap(1)).iotime(),
-    });
+    try stdout.print("{f}", .{std.json.fmt(stats, .{})});
 
     return 0;
 }

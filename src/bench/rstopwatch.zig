@@ -71,7 +71,7 @@ pub fn take_snapshot(self: *Self) !void {
     });
 }
 
-pub fn get_lap(self: *Self, n: u32) !Lap {
+pub fn get_lap(self: *const Self, n: usize) !Lap {
     if (self.snapshots.items.len <= n + 1) {
         return e.InvalidLap;
     }
@@ -79,4 +79,8 @@ pub fn get_lap(self: *Self, n: u32) !Lap {
         .start = self.snapshots.items[n],
         .end = self.snapshots.items[n + 1],
     };
+}
+
+pub fn last_lap(self: *const Self) !Lap {
+    return self.get_lap(self.snapshots.items.len - 2);
 }
