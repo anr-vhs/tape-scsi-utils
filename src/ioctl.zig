@@ -5,6 +5,8 @@ const c = @cImport({
     @cInclude("stdio.h");
 });
 
+pub const perror = c.perror;
+
 pub const Error = error{
     IoctlError,
 };

@@ -7,24 +7,32 @@ const mtio = @cImport({
 const mtop = mtio.mtop;
 
 const ioctl = @import("ioctl.zig").ioctl;
+const perror = @import("ioctl.zig").perror;
 
 const Self = @This();
 
 const Error = error{
     IoctlError,
+    WriteError,
+    ReadError,
 };
 
 /// File descriptor of the device file
 file: std.Io.File,
 io: std.Io,
+block_size: usize,
 
 /// Create a drive object
 /// @arg device_path : The absolute path to the device file
 pub fn init(device_path: []const u8, io: std.Io) !Self {
     const device_file = try std.Io.Dir.openFileAbsolute(io, device_path, .{ .mode = .read_write });
+    errdefer device_file.close(io);
+    var info: mtio.mtget = undefined;
+    try ioctl(device_file.handle, mtio.MTIOCGET, &info);
     return .{
         .file = device_file,
         .io = io,
+        .block_size = @intCast((info.mt_dsreg & mtio.MT_ST_BLKSIZE_MASK) >> mtio.MT_ST_BLKSIZE_SHIFT),
     };
 }
 
@@ -52,4 +60,75 @@ pub fn tell(self: *const Self) !usize {
     try ioctl(self.file.handle, mtio.MTIOCPOS, &pos);
 
     return @intCast(pos.mt_blkno);
+}
+
+pub fn set_blksize(self: *Self, blksize: usize) !void {
+    var op: mtop = .{
+        .mt_op = mtio.MTSETBLK,
+        .mt_count = @intCast(blksize),
+    };
+
+    try ioctl(self.file.handle, mtio.MTIOCTOP, &op);
+
+    self.block_size = blksize;
+}
+
+pub fn write(self: *const Self, comptime T: type, data: *const T) !void {
+    if (self.block_size == 0) {
+        if (std.c.write(self.file.handle, @ptrCast(data), @sizeOf(T)) != @sizeOf(T)) {
+            perror("write");
+            return Error.WriteError;
+        }
+        return;
+    }
+
+    const buffer_size = (@divFloor(@sizeOf(T), self.block_size) + 1) * self.block_size;
+    const buffer = try std.heap.page_allocator.alloc(u8, buffer_size);
+    defer std.heap.page_allocator.free(buffer);
+
+    @memcpy(buffer[0 .. @sizeOf(T) - 1], data);
+
+    for (0..(@divExact(buffer_size, self.block_size))) |i| {
+        try self.write_block(buffer[(i * self.block_size)..((i + 1) * self.block_size)]);
+    }
+}
+
+pub fn write_block(self: *const Self, data: []const u8) !void {
+    if (data.len != self.block_size) {
+        return Error.WriteError;
+    }
+    if (std.c.write(self.file.handle, @ptrCast(data), @intCast(self.block_size)) != self.block_size) {
+        perror("write");
+        return Error.WriteError;
+    }
+}
+
+pub fn read(self: *const Self, comptime T: type) !T {
+    var data: T = undefined;
+    if (self.block_size == 0) {
+        if (std.c.read(self.file.handle, @ptrCast(&data), @sizeOf(T)) != @sizeOf(T)) {
+            perror("read");
+            return Error.ReadError;
+        }
+    } else {
+        const buffer_size = (@divFloor(@sizeOf(T), self.block_size) + 1) * self.block_size;
+        const buffer = try std.heap.page_allocator.alloc(u8, buffer_size);
+        defer std.heap.page_allocator.free(buffer);
+
+        var read_ptr = buffer.ptr;
+
+        for (0..(@divFloor(@sizeOf(T), self.block_size) + 1)) |_| {
+            try self.read_block(read_ptr);
+            read_ptr += self.block_size;
+        }
+        @memcpy(&data, buffer[0 .. @sizeOf(T) - 1]);
+    }
+    return data;
+}
+
+pub fn read_block(self: *const Self, data: [*]u8) !void {
+    if (std.c.read(self.file.handle, data, self.block_size) != self.block_size) {
+        perror("read");
+        return Error.ReadError;
+    }
 }

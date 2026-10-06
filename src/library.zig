@@ -33,7 +33,7 @@ allocator: std.mem.Allocator,
 /// Create a library controller object
 /// @arg changer_path : Path to the changer device file
 /// @arg drive_paths : Array of paths to the drive devices
-pub fn init(changer_path: []const u8, drive_paths: [][]const u8, io: std.Io, allocator: std.mem.Allocator) !Self {
+pub fn init(changer_path: []const u8, drive_paths: []const []const u8, io: std.Io, allocator: std.mem.Allocator) !Self {
     const changer = try Changer.init(changer_path, io);
     if (changer.n_drives != drive_paths.len) {
         return Error.InvalidPathAmount;
@@ -131,10 +131,10 @@ pub fn store(self: *Self, drive: usize, slot: usize) !void {
         return Error.DestinationFull;
     }
 
-    try self.changer.store(drive, slot);
-
     self.drives.items[drive].drive.?.deinit();
     self.slots.items[slot].content = self.drives.items[drive].content;
     self.drives.items[drive].drive = null;
     self.drives.items[drive].content = null;
+
+    try self.changer.store(drive, slot);
 }
