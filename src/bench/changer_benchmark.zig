@@ -5,6 +5,8 @@ const RStopwatch = @import("rstopwatch.zig");
 const BenchStats = @import("main.zig").BenchStats;
 const NDArray = @import("utils.zig").NDArray;
 
+const array_to_csv = @import("utils.zig").array_to_csv;
+
 const ITERATIONS = 4;
 
 pub const ChangerBenchmark = struct {
@@ -14,6 +16,29 @@ pub const ChangerBenchmark = struct {
     loads: NDArray(2, BenchStats),
     stores: NDArray(2, BenchStats),
     moves: NDArray(2, BenchStats),
+
+    pub fn save(self: *@This(), dir: std.Io.Dir, io: std.Io) !void {
+        var buffer: [256]u8 = undefined;
+        var meta = try dir.createFile(io, "meta.toml", .{});
+        defer meta.close(io);
+        var loads = try dir.createFile(io, "loads.csv", .{});
+        defer loads.close(io);
+        var stores = try dir.createFile(io, "stores.csv", .{});
+        defer stores.close(io);
+        var moves = try dir.createFile(io, "moves.csv", .{});
+        defer moves.close(io);
+
+        var meta_writer = meta.writerStreaming(io, &buffer);
+        const w = &meta_writer.interface;
+        try w.print("iterations = {}\n" ++
+            "n_drives = {}\n" ++
+            "n_slots = {}", .{ self.iterations, self.n_drives, self.n_slots });
+        try w.flush();
+
+        try array_to_csv(self.loads, loads, io);
+        try array_to_csv(self.stores, stores, io);
+        try array_to_csv(self.moves, moves, io);
+    }
 };
 
 fn do_stats(laps: [ITERATIONS]RStopwatch.Lap) BenchStats {
@@ -45,6 +70,7 @@ pub fn benchmark_changer(library: *Library, gpa: std.mem.Allocator, io: std.Io) 
     var stopwatch = try RStopwatch.init(std.Io.Clock.real, io, gpa);
     defer stopwatch.deinit();
 
+    // Benchmark load and stores
     for (0..library.changer.n_slots) |s| {
         try library.changer.move_arm(Library.Changer.ElementKind.Slot, s);
         for (0..library.changer.n_drives) |d| {
@@ -55,6 +81,7 @@ pub fn benchmark_changer(library: *Library, gpa: std.mem.Allocator, io: std.Io) 
                 try library.load(s, d);
                 try stopwatch.take_snapshot();
                 load_iters[i] = try stopwatch.last_lap();
+
                 try stopwatch.take_snapshot();
                 try library.store(d, s);
                 try stopwatch.take_snapshot();
@@ -65,6 +92,7 @@ pub fn benchmark_changer(library: *Library, gpa: std.mem.Allocator, io: std.Io) 
         }
     }
 
+    // Benchmark arm moves
     for (0..library.changer.n_slots) |s1| {
         try library.changer.move_arm(Library.Changer.ElementKind.Slot, s1);
         for (0..library.changer.n_slots) |s2| {

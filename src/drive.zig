@@ -86,18 +86,22 @@ pub fn write(self: *const Self, comptime T: type, data: *const T) !void {
     const buffer = try std.heap.page_allocator.alloc(u8, buffer_size);
     defer std.heap.page_allocator.free(buffer);
 
-    @memcpy(buffer[0 .. @sizeOf(T) - 1], data);
+    var write_ptr = buffer.ptr;
 
-    for (0..(@divExact(buffer_size, self.block_size))) |i| {
-        try self.write_block(buffer[(i * self.block_size)..((i + 1) * self.block_size)]);
+    @memset(buffer, 0);
+    @memcpy(buffer.ptr, data);
+
+    for (0..(@divExact(buffer_size, self.block_size))) |_| {
+        try self.write_block(write_ptr);
+        write_ptr += self.block_size;
     }
 }
 
-pub fn write_block(self: *const Self, data: []const u8) !void {
+pub fn write_block(self: *const Self, data: [*]const u8) !void {
     if (data.len != self.block_size) {
         return Error.WriteError;
     }
-    if (std.c.write(self.file.handle, @ptrCast(data), @intCast(self.block_size)) != self.block_size) {
+    if (std.c.write(self.file.handle, data, self.block_size) != self.block_size) {
         perror("write");
         return Error.WriteError;
     }

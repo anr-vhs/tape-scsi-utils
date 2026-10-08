@@ -44,7 +44,11 @@ pub fn main(init: std.process.Init) !u8 {
     defer stats.stores.deinit(init.gpa);
     defer stats.moves.deinit(init.gpa);
 
-    try stdout.print("{f}", .{std.json.fmt(stats, .{})});
+    const cwd = std.Io.Dir.cwd();
+    cwd.createDir(init.io, "bench", std.Io.File.Permissions.default_dir) catch {
+        std.log.warn("Benchmark directory already exists, overwriting...", .{});
+    };
+    try stats.save(try cwd.openDir(init.io, "bench", .{}), init.io);
 
     return 0;
 }
