@@ -23,7 +23,6 @@ io: std.Io,
 block_size: usize,
 
 /// Create a drive object
-/// @arg device_path : The absolute path to the device file
 pub fn init(device_path: []const u8, io: std.Io) !Self {
     const device_file = try std.Io.Dir.openFileAbsolute(io, device_path, .{ .mode = .read_write });
     errdefer device_file.close(io);
@@ -41,7 +40,6 @@ pub fn deinit(self: *Self) void {
 }
 
 /// Seek to a block
-/// @arg block : Block number
 pub fn seek(self: *const Self, block: usize) !void {
     std.log.debug("Seeking to {}", .{block});
     var op: mtop = .{
@@ -62,6 +60,9 @@ pub fn tell(self: *const Self) !usize {
     return @intCast(pos.mt_blkno);
 }
 
+/// Sets the block size of the tape
+///
+/// Setting the block size to 0 means variable block size
 pub fn set_blksize(self: *Self, blksize: usize) !void {
     var op: mtop = .{
         .mt_op = mtio.MTSETBLK,
@@ -73,6 +74,7 @@ pub fn set_blksize(self: *Self, blksize: usize) !void {
     self.block_size = blksize;
 }
 
+/// Writes a data structure to the tape
 pub fn write(self: *const Self, comptime T: type, data: *const T) !void {
     if (self.block_size == 0) {
         if (std.c.write(self.file.handle, @ptrCast(data), @sizeOf(T)) != @sizeOf(T)) {
@@ -97,6 +99,7 @@ pub fn write(self: *const Self, comptime T: type, data: *const T) !void {
     }
 }
 
+/// Write a block of data to the tape
 pub fn write_block(self: *const Self, data: [*]const u8) !void {
     if (data.len != self.block_size) {
         return Error.WriteError;
@@ -107,6 +110,7 @@ pub fn write_block(self: *const Self, data: [*]const u8) !void {
     }
 }
 
+/// Read a data structure from the tape
 pub fn read(self: *const Self, comptime T: type) !T {
     var data: T = undefined;
     if (self.block_size == 0) {
@@ -130,7 +134,11 @@ pub fn read(self: *const Self, comptime T: type) !T {
     return data;
 }
 
+/// Read a block of data from the tape
 pub fn read_block(self: *const Self, data: [*]u8) !void {
+    if (data.len != self.block_size) {
+        return Error.ReadError;
+    }
     if (std.c.read(self.file.handle, data, self.block_size) != self.block_size) {
         perror("read");
         return Error.ReadError;

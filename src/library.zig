@@ -1,6 +1,6 @@
 const std = @import("std");
-pub const Changer = @import("changer.zig");
-pub const Drive = @import("drive.zig");
+const Changer = @import("changer.zig");
+const Drive = @import("drive.zig");
 
 const Tape = struct {
     volume_tag: [36]u8,
@@ -30,9 +30,6 @@ slots: std.ArrayList(Slot),
 io: std.Io,
 allocator: std.mem.Allocator,
 
-/// Create a library controller object
-/// @arg changer_path : Path to the changer device file
-/// @arg drive_paths : Array of paths to the drive devices
 pub fn init(changer_path: []const u8, drive_paths: []const []const u8, io: std.Io, allocator: std.mem.Allocator) !Self {
     const changer = try Changer.init(changer_path, io);
     if (changer.n_drives != drive_paths.len) {
@@ -91,8 +88,6 @@ pub fn deinit(self: *Self) void {
 }
 
 /// Load a tape in a drive
-/// @arg slot : Slot number
-/// @arg drive : Drive number
 pub fn load(self: *Self, slot: usize, drive: usize) !void {
     if (slot >= self.changer.n_slots) {
         return Changer.Error.InvalidSlot;
@@ -115,8 +110,6 @@ pub fn load(self: *Self, slot: usize, drive: usize) !void {
 }
 
 /// Store a tape in a slot
-/// @arg drive : Drive number
-/// @arg slot : Slot number
 pub fn store(self: *Self, drive: usize, slot: usize) !void {
     if (drive >= self.changer.n_drives) {
         return Changer.Error.InvalidDrive;
@@ -137,4 +130,41 @@ pub fn store(self: *Self, drive: usize, slot: usize) !void {
     self.drives.items[drive].content = null;
 
     try self.changer.store(drive, slot);
+}
+
+/// Move a tape from one element to another
+pub fn move(self: *Self, source_kind: Changer.ElementKind, source_id: usize, dest_kind: Changer.ElementKind, dest_id: usize) !void {
+    switch (source_kind) {
+        .Slot => switch (dest_kind) {
+            .Drive => return self.load(source_id, dest_id),
+            .Slot => {
+                if (source_id >= self.changer.n_slots) return Changer.Error.InvalidSlot;
+                if (dest_id >= self.changer.n_slots) return Changer.Error.InvalidSlot;
+                if (self.slots.items[source_id].content == null) return Error.SourceEmpty;
+                if (self.slots.items[dest_id].content != null) return Error.DestinationFull;
+
+                try self.changer.move(source_kind, source_id, dest_kind, dest_id);
+                self.slots.items[dest_id].content = self.slots.items[source_id].content;
+                self.slots.items[source_id].content = null;
+            },
+        },
+        .Drive => switch (dest_kind) {
+            .Slot => return self.store(source_id, dest_id),
+            .Drive => {
+                if (source_id >= self.changer.n_drives) return Changer.Error.InvalidDrive;
+                if (dest_id >= self.changer.n_drives) return Changer.Error.InvalidDrive;
+                if (self.drives.items[source_id].content == null) return Error.SourceEmpty;
+                if (self.drives.items[dest_id].content != null) return Error.DestinationFull;
+
+                self.drives.items[source_id].drive.?.deinit();
+                self.changer.move(source_kind, source_id, dest_kind, dest_id) catch |err| {
+                    self.drives.items[source_id].drive = try Drive.init(self.drives.items[source_id].path, self.io);
+                    return err;
+                };
+                self.drives.items[dest_id].drive = try Drive.init(self.drives.items[dest_id].path, self.io);
+                self.drives.items[dest_id].content = self.drives.items[source_id].content;
+                self.drives.items[source_id].content = null;
+            },
+        },
+    }
 }

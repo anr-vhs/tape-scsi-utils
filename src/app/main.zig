@@ -1,7 +1,8 @@
 const std = @import("std");
-const Library = @import("library");
-const Changer = Library.Changer;
-const Drive = Library.Drive;
+const tapelib = @import("library");
+const Library = tapelib.Library;
+const Changer = tapelib.Changer;
+const Drive = tapelib.Drive;
 
 const argparse = @import("argparse.zig");
 

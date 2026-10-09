@@ -4,7 +4,7 @@ const Allocator = std.mem.Allocator;
 
 const BenchStats = @import("main.zig").BenchStats;
 
-const FLOAT_PRECISION: usize = 5;
+const FLOAT_PRECISION: usize = 2;
 
 pub const Error = error{
     InvalidDimensions,

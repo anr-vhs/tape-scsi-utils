@@ -1,5 +1,7 @@
 const std = @import("std");
-const Library = @import("library");
+const tapelib = @import("library");
+const Library = tapelib.Library;
+const Changer = tapelib.Changer;
 
 const RStopwatch = @import("rstopwatch.zig");
 const BenchStats = @import("main.zig").BenchStats;
@@ -72,7 +74,11 @@ pub fn benchmark_changer(library: *Library, gpa: std.mem.Allocator, io: std.Io) 
 
     // Benchmark load and stores
     for (0..library.changer.n_slots) |s| {
-        try library.changer.move_arm(Library.Changer.ElementKind.Slot, s);
+        try library.changer.move_arm(Changer.ElementKind.Slot, s);
+        if (library.slots.items[s].content == null) {
+            const ElementKind = Changer.ElementKind;
+            try library.move(ElementKind.Slot, s - 1, ElementKind.Slot, s);
+        }
         for (0..library.changer.n_drives) |d| {
             var load_iters: [ITERATIONS]RStopwatch.Lap = undefined;
             var store_iters: [ITERATIONS]RStopwatch.Lap = undefined;
@@ -94,14 +100,14 @@ pub fn benchmark_changer(library: *Library, gpa: std.mem.Allocator, io: std.Io) 
 
     // Benchmark arm moves
     for (0..library.changer.n_slots) |s1| {
-        try library.changer.move_arm(Library.Changer.ElementKind.Slot, s1);
+        try library.changer.move_arm(Changer.ElementKind.Slot, s1);
         for (0..library.changer.n_slots) |s2| {
             var move_iters: [ITERATIONS]RStopwatch.Lap = undefined;
             for (0..ITERATIONS) |i| {
                 try stopwatch.take_snapshot();
-                try library.changer.move_arm(Library.Changer.ElementKind.Slot, s2);
+                try library.changer.move_arm(Changer.ElementKind.Slot, s2);
                 try stopwatch.take_snapshot();
-                try library.changer.move_arm(Library.Changer.ElementKind.Slot, s1);
+                try library.changer.move_arm(Changer.ElementKind.Slot, s1);
                 move_iters[i] = try stopwatch.last_lap();
             }
             moves.get(.{ s1, s2 }).* = do_stats(move_iters);
