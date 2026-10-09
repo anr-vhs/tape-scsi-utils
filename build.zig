@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .link_libc = true,
-        .root_source_file = b.path("src/library.zig"),
+        .root_source_file = b.path("src/root.zig"),
     });
 
     const tapelib = b.addLibrary(.{
