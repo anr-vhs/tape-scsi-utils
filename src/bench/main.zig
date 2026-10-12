@@ -49,7 +49,7 @@ pub fn main(init: std.process.Init) !u8 {
     cwd.createDir(init.io, "bench", std.Io.File.Permissions.default_dir) catch {
         std.log.warn("Benchmark directory already exists, overwriting...", .{});
     };
-    try stats.save(try cwd.openDir(init.io, "bench", .{}), init.io);
+    try stats.save(try cwd.openDir(init.io, "chbench", .{}), init.io);
 
     return 0;
 }
