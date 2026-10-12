@@ -39,6 +39,16 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(tape);
     b.installArtifact(bench);
 
+    const test_step = b.step("test", "Run unit tests");
+
+    const tests = b.addTest(.{
+        .root_module = library,
+    });
+
+    const run_tests = b.addRunArtifact(tests);
+
+    test_step.dependOn(&run_tests.step);
+
     const docs = b.addInstallDirectory(.{
         .source_dir = tapelib.getEmittedDocs(),
         .install_dir = .prefix,

@@ -84,28 +84,23 @@ pub fn write(self: *const Self, comptime T: type, data: *const T) !void {
         return;
     }
 
+    // Pad if needed
     const buffer_size = (@divFloor(@sizeOf(T), self.block_size) + 1) * self.block_size;
     const buffer = try std.heap.page_allocator.alloc(u8, buffer_size);
     defer std.heap.page_allocator.free(buffer);
 
-    var write_ptr = buffer.ptr;
-
     @memset(buffer, 0);
     @memcpy(buffer.ptr, data);
 
-    for (0..(@divExact(buffer_size, self.block_size))) |_| {
-        try self.write_block(write_ptr);
-        write_ptr += self.block_size;
-    }
+    self.write_bytes(buffer.ptr, buffer.len) catch {
+        perror("write");
+        return Error.WriteError;
+    };
 }
 
-/// Write a block of data to the tape
-pub fn write_block(self: *const Self, data: [*]const u8) !void {
-    if (data.len != self.block_size) {
-        return Error.WriteError;
-    }
-    if (std.c.write(self.file.handle, data, self.block_size) != self.block_size) {
-        perror("write");
+/// Write raw bytes of data to the tape
+pub fn write_bytes(self: *const Self, data: [*]const u8, size: usize) !void {
+    if (std.c.write(self.file.handle, data, size) != size) {
         return Error.WriteError;
     }
 }
@@ -123,24 +118,19 @@ pub fn read(self: *const Self, comptime T: type) !T {
         const buffer = try std.heap.page_allocator.alloc(u8, buffer_size);
         defer std.heap.page_allocator.free(buffer);
 
-        var read_ptr = buffer.ptr;
+        self.read_bytes(buffer.ptr, buffer_size) catch {
+            perror("read");
+            return Error.ReadError;
+        };
 
-        for (0..(@divFloor(@sizeOf(T), self.block_size) + 1)) |_| {
-            try self.read_block(read_ptr);
-            read_ptr += self.block_size;
-        }
         @memcpy(&data, buffer[0 .. @sizeOf(T) - 1]);
     }
     return data;
 }
 
-/// Read a block of data from the tape
-pub fn read_block(self: *const Self, data: [*]u8) !void {
-    if (data.len != self.block_size) {
-        return Error.ReadError;
-    }
-    if (std.c.read(self.file.handle, data, self.block_size) != self.block_size) {
-        perror("read");
+/// Read raw bytes of data from the tape
+pub fn read_bytes(self: *const Self, data: [*]u8, size: usize) !void {
+    if (std.c.read(self.file.handle, data, size) != size) {
         return Error.ReadError;
     }
 }
