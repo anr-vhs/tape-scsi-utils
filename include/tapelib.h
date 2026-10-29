@@ -69,10 +69,6 @@ size_t drive_tell(const Drive *drive);
  * Set the tape block size. A block size of 0 means variable block size.
  */
 int drive_set_block_size(Drive *drive, size_t block_size);
-/** Write raw bytes as one tape record. */
-int drive_write_bytes(const Drive *drive, const void *data, size_t size);
-/** Read raw bytes as one tape record. */
-int drive_read_bytes(const Drive *drive, void *data, size_t size);
 /**
  * Write data to tape, padding it with zeroes to a block boundary when using
  * fixed-size blocks. The data is written as a single record.
