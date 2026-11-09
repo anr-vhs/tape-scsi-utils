@@ -4,13 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef enum {
-    TRACE,
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR
-} LogLevel;
+#include "tapelib.h"
 
 extern LogLevel log_level;
 

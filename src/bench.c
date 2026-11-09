@@ -11,8 +11,6 @@
 #include "logger.h"
 #include "stopwatch_utils.h"
 
-LogLevel log_level = TRACE;
-
 #define ITERATIONS 4
 
 typedef struct {
@@ -215,6 +213,7 @@ fail: // Some cleanup in case the funtion fails
 }
 
 int main(int argc, char **argv) {
+    set_log_level(TRACE);
     if (argc < 3) {
         fprintf(stderr, "Usage: %s <changer> <drives>...\n", argv[0]);
         return 1;

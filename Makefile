@@ -30,10 +30,10 @@ $(TAPELIB): $(OBJ_DIR)/changer.o $(OBJ_DIR)/drive.o $(OBJ_DIR)/library.o | $(LIB
 	$(CC) -shared $(LDFLAGS) $^ -o $@
 
 $(BIN_DIR)/tape: $(OBJ_DIR)/tape.o $(TAPELIB) | $(BIN_DIR)
-	$(CC) $(LDFLAGS) $< -L ./$(LIB_DIR) -l $(LIBNAME) -o $@
+	$(CC) $< -L ./$(LIB_DIR) -l $(LIBNAME) $(LDFLAGS) -o $@
 
 $(BIN_DIR)/bench: $(OBJ_DIR)/bench.o $(OBJ_DIR)/stopwatch_utils.o $(TAPELIB) | $(BIN_DIR)
-	$(CC) $(LDFLAGS) $(OBJ_DIR)/bench.o $(OBJ_DIR)/stopwatch_utils.o -L ./$(LIB_DIR) -l $(LIBNAME) -o $@
+	$(CC) $(OBJ_DIR)/bench.o $(OBJ_DIR)/stopwatch_utils.o -L ./$(LIB_DIR) -l $(LIBNAME) $(LDFLAGS) -o $@
 
 clean:
 	rm -r $(BUILD_DIR)

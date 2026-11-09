@@ -6,6 +6,12 @@
 
 #include "logger.h"
 
+LogLevel log_level = INFO;
+
+void set_log_level(LogLevel level) {
+    log_level = level;
+}
+
 static int library_validate_index(size_t index, size_t count) {
     if (index >= count) {
         errno = ERANGE;

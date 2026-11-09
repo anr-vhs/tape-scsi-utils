@@ -5,6 +5,14 @@
 
 #include <linux/chio.h>
 
+typedef enum {
+    TRACE,
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR
+} LogLevel;
+
 #define TAPE_VOLUME_TAG_SIZE 36
 
 typedef enum {
@@ -51,6 +59,12 @@ typedef struct {
     LibrarySlot *slots;
     size_t slot_count;
 } Library;
+
+/**
+ * @brief Sets the logging level of the library
+ * @param level The now log level
+ */
+void set_log_level(LogLevel level);
 
 /**
  * @brief Create a drive object for a tape device.

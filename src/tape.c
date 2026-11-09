@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include "logger.h"
-LogLevel log_level = INFO;
 
 static void print_help(const char *command) {
     printf("Help :\n"
@@ -67,6 +66,8 @@ static int print_contents(const Changer *changer) {
 }
 
 int main(int argc, char **argv) {
+    set_log_level(TRACE);
+
     if (argc < 2) {
         print_help(argv[0]);
         return 1;
