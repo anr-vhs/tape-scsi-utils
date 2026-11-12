@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
 
         size_t block = drive_tell(&drive);
         int result = 0;
-        if (block == SIZE_MAX) {
+        if (block != SIZE_MAX) {
             printf("%zu", block);
         } else {
             log_error("Could not get current block");

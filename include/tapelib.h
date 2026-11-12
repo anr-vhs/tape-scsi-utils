@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -21,7 +22,7 @@ typedef enum {
 } TapeElementKind;
 
 typedef struct {
-    int full; /**< Nonzero when the element contains media. */
+    bool full; /**< Nonzero when the element contains media. */
     unsigned char
         tag[TAPE_VOLUME_TAG_SIZE]; /**< The element's primary volume tag. */
 } TapeElement;
