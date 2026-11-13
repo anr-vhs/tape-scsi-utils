@@ -71,8 +71,8 @@ static int save_metadata(size_t drives, size_t slots) {
     }
     fprintf(meta,
             "iterations = %d\n"
-            "n_drives = %zu\n"
-            "n_slots = %zu\n",
+            "drive_count = %zu\n"
+            "slot_count = %zu\n",
             ITERATIONS, drives, slots);
     return fclose(meta);
 }
