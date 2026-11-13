@@ -6,13 +6,7 @@
 
 #include <linux/chio.h>
 
-typedef enum {
-    TRACE,
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR
-} LogLevel;
+typedef enum { TRACE, DEBUG, INFO, WARN, ERROR } LogLevel;
 
 #define TAPE_VOLUME_TAG_SIZE 36
 
@@ -113,13 +107,13 @@ int changer_move_arm(const Changer *changer, TapeElementKind kind,
  * Get the contents of all drives or all storage slots.
  * @param changer Changer to query.
  * @param kind Element kind; must be TAPE_ELEMENT_DRIVE or TAPE_ELEMENT_SLOT.
- * @param[out] contents Receives an allocated array of element states. The
- * caller owns the array and must release it with free().
  * @param[out] count Receives the number of elements in the array.
- * @return 0 on success; -1 on failure.
+ * @return An allocated array of element states. The
+ * caller owns the array and must release it with free().
+ * Returns NULL on failure.
  */
-int changer_get_contents(const Changer *changer, TapeElementKind kind,
-                         TapeElement **contents, size_t *count);
+TapeElement *changer_get_contents(const Changer *changer, TapeElementKind kind,
+                                  size_t *count);
 
 /**
  * @brief Initialize a library and query its changer's current media state.

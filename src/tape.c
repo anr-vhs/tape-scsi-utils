@@ -16,10 +16,9 @@ static void print_help(const char *command) {
            "Available operations :\n"
            "    help : Show this message and exit\n"
            "  Changer operations\n"
-           "    load <slot> <drive> [device] : Load a tape from a slot to a "
-           "drive\n"
-           "    store <drive> <slot> [device] : Store a tape from a drive to a "
-           "slot\n"
+           "    load <slot> <drive> [device] : Load a tape from a slot to a drive\n"
+           "    store <drive> <slot> [device] : Store a tape from a drive to a slot\n"
+           "    move <slot> <slot> [device] : Move a tape from a slot to another\n"
            "    contents [device] : Get the contents of each drive and slot\n"
            "  Tape drive operations\n"
            "    tell <device> : Tell at which block the reader is in the tape\n"
@@ -47,9 +46,9 @@ static int print_contents(const Changer *changer) {
     const TapeElementKind kinds[] = {TAPE_ELEMENT_DRIVE, TAPE_ELEMENT_SLOT};
     const char *names[] = {"Drive", "Slot"};
     for (size_t k = 0; k < 2; ++k) {
-        TapeElement *contents = NULL;
         size_t count = 0;
-        if (changer_get_contents(changer, kinds[k], &contents, &count) < 0) {
+        TapeElement *contents = changer_get_contents(changer, kinds[k], &count);
+        if (!contents) {
             return -1;
         }
         for (size_t i = 0; i < count; ++i) {
@@ -122,6 +121,31 @@ int main(int argc, char **argv) {
             return 1;
         }
         int result = changer_store(&changer, source, destination);
+
+        changer_deinit(&changer);
+        return result;
+    }
+
+    if (strcmp(argv[1], "move") == 0) {
+        if (argc < 4) {
+            log_error("Invalid usage");
+            print_help(argv[0]);
+            return 1;
+        }
+        size_t source = parse_size(argv[2]);
+        size_t destination = parse_size(argv[3]);
+
+        if (errno == EINVAL) {
+            log_error("Invalid usage");
+            print_help(argv[0]);
+        }
+
+        Changer changer;
+        const char *device = argc == 5 ? argv[4] : "/dev/sch0";
+        if (changer_init(&changer, device) < 0) {
+            return 1;
+        }
+        int result = changer_move(&changer, TAPE_ELEMENT_SLOT, source, TAPE_ELEMENT_SLOT, destination);
 
         changer_deinit(&changer);
         return result;

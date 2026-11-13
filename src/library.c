@@ -8,9 +8,7 @@
 
 LogLevel log_level = INFO;
 
-void set_log_level(LogLevel level) {
-    log_level = level;
-}
+void set_log_level(LogLevel level) { log_level = level; }
 
 static int library_validate_index(size_t index, size_t count) {
     if (index >= count) {
@@ -22,8 +20,6 @@ static int library_validate_index(size_t index, size_t count) {
 
 int library_init(Library *library, const char *changer_path,
                  const char *const *drive_paths, size_t drive_count) {
-    TapeElement *drive_contents = NULL;
-    TapeElement *slot_contents = NULL;
     size_t contents_count = 0;
     memset(library, 0, sizeof(*library));
     library->changer.fd = -1;
@@ -33,16 +29,18 @@ int library_init(Library *library, const char *changer_path,
     }
     if (library->changer.drive_count != drive_count) {
         errno = EINVAL;
-        log_error("Drive counts not matching %lu != %lu", library->changer.drive_count, drive_count);
+        log_error("Drive counts not matching %lu != %lu",
+                  library->changer.drive_count, drive_count);
         goto fail;
     }
     library->drive_count = drive_count;
     library->slot_count = library->changer.slot_count;
     library->drives = calloc(drive_count, sizeof(*library->drives));
     library->slots = calloc(library->slot_count, sizeof(*library->slots));
-    if (changer_get_contents(&library->changer, TAPE_ELEMENT_DRIVE,
-                             &drive_contents, &contents_count) < 0) {
-                                 log_perror();
+    TapeElement *drive_contents = changer_get_contents(
+        &library->changer, TAPE_ELEMENT_DRIVE, &contents_count);
+    if (!drive_contents) {
+        log_perror();
         goto fail;
     }
     for (size_t i = 0; i < drive_count; ++i) {
@@ -62,9 +60,9 @@ int library_init(Library *library, const char *changer_path,
         }
     }
     free(drive_contents);
-    drive_contents = NULL;
-    if (changer_get_contents(&library->changer, TAPE_ELEMENT_SLOT,
-                             &slot_contents, &contents_count) < 0) {
+    TapeElement *slot_contents = changer_get_contents(
+        &library->changer, TAPE_ELEMENT_SLOT, &contents_count);
+    if (!slot_contents) {
         goto fail;
     }
     for (size_t i = 0; i < library->slot_count; ++i) {

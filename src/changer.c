@@ -35,7 +35,10 @@ int changer_init(Changer *changer, const char *device_path) {
     }
     changer->drive_count = (size_t)params.cp_ndrives;
     changer->slot_count = (size_t)params.cp_nslots;
-    log_trace("Changer at %s init", device_path);
+    log_trace(
+        "Changer at %s init with %zu drives, %zu slots, %d arms, %d I/O slots",
+        device_path, changer->drive_count, changer->slot_count,
+        params.cp_npickers, params.cp_nportals);
     return 0;
 }
 
@@ -127,24 +130,23 @@ int changer_move_arm(const Changer *changer, TapeElementKind kind,
     return 0;
 }
 
-int changer_get_contents(const Changer *changer, TapeElementKind kind,
-                         TapeElement **contents, size_t *count) {
-    size_t element_count;
+TapeElement *changer_get_contents(const Changer *changer, TapeElementKind kind,
+                                  size_t *count) {
     if (kind == TAPE_ELEMENT_DRIVE) {
-        element_count = changer->drive_count;
+        *count = changer->drive_count;
     } else if (kind == TAPE_ELEMENT_SLOT) {
-        element_count = changer->slot_count;
+        *count = changer->slot_count;
     } else {
         errno = EINVAL;
-        return -1;
+        return NULL;
     }
 
-    if (element_count == 0) {
-        return -1;
+    if (*count == 0) {
+        return NULL;
     }
 
-    TapeElement *result = calloc(element_count, sizeof(*result));
-    unsigned char *status_data = calloc(element_count, sizeof(*status_data));
+    TapeElement *result = calloc(*count, sizeof(*result));
+    unsigned char *status_data = calloc(*count, sizeof(*status_data));
 
     struct changer_element_status status = {
         .ces_type = kind,
@@ -155,27 +157,25 @@ int changer_get_contents(const Changer *changer, TapeElementKind kind,
         log_perror();
         free(result);
         free(status_data);
-        return -1;
+        return NULL;
     }
-    for (size_t i = 0; i < element_count; ++i) {
+    for (int i = 0; i < *count; ++i) {
         if ((status_data[i] & CESTATUS_FULL) == 0) {
             continue;
         }
         struct changer_get_element element = {
             .cge_type = kind,
-            .cge_unit = (int)i,
+            .cge_unit = i,
         };
         if (ioctl(changer->fd, CHIOGELEM, &element) < 0) {
             log_perror();
             free(result);
             free(status_data);
-            return -1;
+            return NULL;
         }
         result[i].full = 1;
         memcpy(result[i].tag, element.cge_pvoltag, TAPE_VOLUME_TAG_SIZE);
     }
     free(status_data);
-    *contents = result;
-    *count = element_count;
-    return 0;
+    return result;
 }
