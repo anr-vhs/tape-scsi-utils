@@ -70,6 +70,12 @@ void set_log_level(LogLevel level);
 int drive_init(Drive *drive, const char *device_path);
 /** Close the tape device and invalidate its file descriptor. */
 void drive_deinit(Drive *drive);
+/** Rewinds the tape */
+int drive_rewind(Drive *drive);
+/** Ensures that the driver uses the logical block addresses defined
+ * in the SCSI-2 standard when performing the seek and tell operations
+ */
+int drive_ensure_logical_block(Drive *drive);
 /** Seek to a tape block. */
 int drive_seek(Drive *drive, size_t block);
 /** Tell which block the reader is on. */

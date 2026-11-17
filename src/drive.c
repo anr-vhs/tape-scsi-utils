@@ -32,6 +32,8 @@ int drive_init(Drive *drive, const char *device_path) {
     drive->block_size =
         (size_t)((info.mt_dsreg & MT_ST_BLKSIZE_MASK) >> MT_ST_BLKSIZE_SHIFT);
 
+    log_trace("Drive %s init, block size is %zu", device_path, drive->block_size);
+
     return 0;
 }
 
@@ -40,6 +42,29 @@ void drive_deinit(Drive *drive) {
         close(drive->fd);
         drive->fd = -1;
     }
+}
+
+int drive_rewind(Drive *drive) {
+    struct mtop op = {.mt_op = MTREW};
+    if (ioctl(drive->fd, MTIOCTOP, &op) < 0) {
+        log_perror();
+        return -1;
+    }
+    return 0;
+}
+
+int drive_ensure_logical_block(Drive *drive) {
+    struct mtop op = {
+        .mt_op = MTSETDRVBUFFER,
+        .mt_count = MT_ST_BOOLEANS | MT_ST_SCSI2LOGICAL,
+    };
+
+    if (ioctl(drive->fd, MTIOCTOP, &op) < 0) {
+        log_perror();
+        return -1;
+    }
+
+    return 0;
 }
 
 int drive_seek(Drive *drive, size_t block) {

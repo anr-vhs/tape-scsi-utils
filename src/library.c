@@ -69,6 +69,13 @@ int library_init(Library *library, const char *changer_path,
         library->slots[i].content = slot_contents[i];
     }
     free(slot_contents);
+    log_trace("Finished initializing library, current contents :");
+    for (size_t i = 0; i < library->drive_count; ++i) {
+        log_trace("  Drive %zu : %s", i, library->drives[i].content.full ? (char *)library->drives[i].content.tag : "Empty");
+    }
+    for (size_t i = 0; i < library->slot_count; ++i) {
+        log_trace("  Slot %zu : %s", i, library->slots[i].content.full ? (char *)library->slots[i].content.tag : "Empty");
+    }
     return 0;
 
 fail:

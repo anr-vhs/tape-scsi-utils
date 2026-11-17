@@ -4,15 +4,16 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static size_t n_laps;
 static size_t laps_capacity;
 static Snapshot *laps;
 
-void __attribute__((constructor)) init();
-void __attribute__((destructor)) deinit();
+void __attribute__((constructor)) init_stopwatch();
+void __attribute__((destructor)) deinit_stopwatch();
 
-void init() {
+void init_stopwatch() {
     n_laps = 0;
     laps_capacity = 16;
     laps = calloc(laps_capacity, sizeof(Snapshot));
@@ -24,12 +25,23 @@ void init() {
     log_trace("initialized stopwatch")
 }
 
-void deinit() {
+void deinit_stopwatch() {
     n_laps = 0;
     free(laps);
 }
 
-Snapshot *next_snapshot() {
+int reset_stopwatch() {
+    memset(laps, 0, n_laps * sizeof(Lap));
+    n_laps = 0;
+    if (clock_gettime(CLOCK_MONOTONIC, &laps[0].wall) < 0 ||
+        getrusage(RUSAGE_SELF, &laps[0].usage) < 0) {
+        log_perror();
+        return -1;
+    }
+    return 0;
+}
+
+static Snapshot *next_snapshot() {
     n_laps++;
     if (n_laps >= laps_capacity) {
         log_trace("not enough capacity (%lu), doubling size", laps_capacity)
@@ -43,7 +55,7 @@ int stopwatch_snapshot() {
     Snapshot *snapshot = next_snapshot();
     if (clock_gettime(CLOCK_MONOTONIC, &snapshot->wall) < 0 ||
         getrusage(RUSAGE_SELF, &snapshot->usage) < 0) {
-        perror("benchmark clock");
+        log_perror();
         return -1;
     }
     return 0;

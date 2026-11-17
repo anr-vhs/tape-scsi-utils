@@ -37,6 +37,8 @@ add_executable(bench)
 target_sources(bench
   PRIVATE
     src/bench.c
+    src/bench_changer.c
+    src/bench_drive.c
     src/stopwatch_utils.c
 )
 target_link_libraries(bench tapelibrary)

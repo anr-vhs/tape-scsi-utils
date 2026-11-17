@@ -11,6 +11,8 @@ typedef struct {
     Snapshot *end;
 } Lap;
 
+int reset_stopwatch();
+
 int stopwatch_snapshot();
 
 Lap get_lap(size_t index);

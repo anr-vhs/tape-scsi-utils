@@ -133,8 +133,10 @@ int changer_move_arm(const Changer *changer, TapeElementKind kind,
 TapeElement *changer_get_contents(const Changer *changer, TapeElementKind kind,
                                   size_t *count) {
     if (kind == TAPE_ELEMENT_DRIVE) {
+        log_trace("Getting contents of drives");
         *count = changer->drive_count;
     } else if (kind == TAPE_ELEMENT_SLOT) {
+        log_trace("Getting contents of slots");
         *count = changer->slot_count;
     } else {
         errno = EINVAL;
@@ -175,6 +177,7 @@ TapeElement *changer_get_contents(const Changer *changer, TapeElementKind kind,
         }
         result[i].full = 1;
         memcpy(result[i].tag, element.cge_pvoltag, TAPE_VOLUME_TAG_SIZE);
+        result[i].tag[TAPE_VOLUME_TAG_SIZE-1] = '\0';
     }
     free(status_data);
     return result;
